@@ -15,8 +15,8 @@ def MakeStatistic(folder):
         эту базу на диск.
         folder - название папки в которой лежит корпус текстов. '''
 
-    total_text = GetText(folder)
-    word_list = MakeList(total_text)
+    whole_text = GetText(folder)
+    word_list = MakeList(whole_text)
     words_distribution = AnalizeWords(word_list)
     words_distribution = DeliteBadWords(*words_distribution)
     words_distribution = MakeDistribution(*words_distribution)
@@ -28,14 +28,13 @@ def GetText(folder):
 
     print 'Getting text...'
 
-    total_text = ''
+    whole_text = ''
     for author in os.listdir('./' + folder):
         if author[0] != '.':
             for book in os.listdir('./{}/{}'.format(folder, author)):
                 with open('./{}/{}/{}'.format(folder, author, book), 'r') as f:
-                    line = f.read()
-                    total_text += ClearText(line)
-    return total_text
+                    whole_text += ClearText(f.read())
+    return whole_text
 
 
 def ClearText(text):
@@ -253,10 +252,11 @@ def GenerateWord(words):
     for value, word in words:
         if value > random_value:
             return word
+    return words[-1]
 
 
 def MakeSentenceBeautiful(sentence):
-    ''' Делает первую букву предложения заглавное, а так же соединяет
+    ''' Делает первую букву предложения заглавной, а так же соединяет
         сокращения и слова. Например из "I" и "m" сделает "I'm". '''
 
     sentence[0] = sentence[0].capitalize()
@@ -282,7 +282,7 @@ def main():
         while True:
             try:
                 sentences_count = int(raw_input('How much sentences do you ' +
-                                                 'want do generate? : '))
+                                                'want do generate? : '))
                 break
             except ValueError:
                 print 'You input incorrect data. Try again.'
@@ -290,7 +290,8 @@ def main():
         with open('generated_text.txt', 'w') as f:
             f.write(text)
         while True:
-            answer = raw_input('Do you want to generate anotherone text? (y/n) : ')
+            answer = raw_input('Do you want to generate' +
+                               'anotherone text? (y/n) : ')
             if answer == 'y' or answer == 'n':
                 break
             print 'You input incorrect data. Try again.'
