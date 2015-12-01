@@ -80,90 +80,53 @@ def AnalizeWords(words):
 
     print 'Analizing words...'
 
-    first_words, after_word, after_words = [0, {}], {}, {}
+    after_word, after_words = {}, {}
     for i, word in enumerate(words):
         if i > 1:
-            if words[i - 1] == '.':
-                first_words[1].setdefault(word, 0)
-                first_words[1][word] += 1
-                first_words[0] += 1
+            for (d, key) in ((after_word, words[i - 1]),
+                             (after_words, words[i - 2] + ' ' + words[i - 1])):
+                d.setdefault(key, [0, {}])
+                d[key][0] += 1
+                d[key][1].setdefault(word, 0)
+                d[key][1][word] += 1
 
-            if words[i - 1] != '.':
-                after_word.setdefault(words[i - 1], [0, {}])
-                after_word[words[i - 1]][0] += 1
-
-                after_word[words[i - 1]][1].setdefault(word, 0)
-                after_word[words[i - 1]][1][word] += 1
-
-            if words[i - 1] != '.' and words[i - 2] != '.':
-                after_words.setdefault(words[i - 2] + ' ' + words[i - 1],
-                                       [0, {}])
-                after_words[words[i - 2] + ' ' + words[i - 1]][0] += 1
-
-                after_words[words[i - 2] + ' ' +
-                            words[i - 1]][1].setdefault(word, 0)
-                after_words[words[i - 2] + ' ' + words[i - 1]][1][word] += 1
-    return first_words, after_word, after_words
+    return after_word, after_words
 
 
-def DeliteBadWords(first_words, after_word, after_words):
+def DeliteBadWords(after_word, after_words):
     ''' Удаляет слова, встречающиеся один раз в тексте. '''
 
-    print 'Deliting bad words...'
+    print 'Deleting bad words...'
 
-    for word, count in first_words[1].items():
-        if count == 1:
-            first_words[1].pop(word)
-            first_words[0] -= 1
+    for d in (after_word, after_words):
+        for one_word, dictionary in d.items():
+            if dictionary[0] == 1:
+                d.pop(one_word)
 
-    for one_word, dictionary in after_word.items():
-        if dictionary[0] == 1:
-            after_word.pop(one_word)
-
-    for two_words, dictionary in after_words.items():
-        if dictionary[0] == 1:
-            after_words.pop(two_words)
-
-    return first_words, after_word, after_words
+    return after_word, after_words
 
 
-def MakeDistribution(first_words, after_word, after_words):
+def MakeDistribution(after_word, after_words):
     ''' Для каждого слова и для каждо пары слов создает распределение слов,
         которые могу стоять после. А так же создает распределение слов,
         с которых предлоежние может начинаться. '''
 
     print 'Making distribution...'
 
-    new_first_words = []
-    current_distribution = 0
-    for key, value in first_words[1].items():
-        distribution = float(value) / first_words[0] + current_distribution
-        current_distribution = distribution
-        new_first_words.append((distribution, key))
-    first_words = new_first_words
+    for d in (after_word, after_words):
+        for word, info in d.items():
+            words_distribution = []
+            current_distribution = 0
+            for key, value in info[1].items():
+                distribution = float(value) / info[0] + current_distribution
+                current_distribution = distribution
+                words_distribution.append((distribution, key))
+            d[word] = words_distribution
 
-    for word, info in after_word.items():
-        words_distribution = []
-        current_distribution = 0
-        for key, value in info[1].items():
-            distribution = float(value) / info[0] + current_distribution
-            current_distribution = distribution
-            words_distribution.append((distribution, key))
-        after_word[word] = words_distribution
-
-    for word, info in after_words.items():
-        words_distribution = []
-        current_distribution = 0
-        for key, value in info[1].items():
-            distribution = float(value) / info[0] + current_distribution
-            current_distribution = distribution
-            words_distribution.append((distribution, key))
-        after_words[word] = words_distribution
-
-    return first_words, after_word, after_words
+    return after_word, after_words
 
 
-def PickleDistribution(first_words, after_word, after_words):
+def PickleDistribution(after_word, after_words):
     ''' Сохраняет три группы распределений на диск. '''
 
     print 'Pickling data...'
@@ -171,12 +134,8 @@ def PickleDistribution(first_words, after_word, after_words):
     if 'words_distribution' not in os.listdir('./'):
         os.mkdir('words_distribution')
 
-    with open('./words_distribution/sentences_begins.pkl', 'wb') as f:
-        pickle.dump(first_words, f)
-
     with open('./words_distribution/after_word.pkl', 'wb') as f:
         pickle.dump(after_word, f)
-
     with open('./words_distribution/after_words.pkl', 'wb') as f:
         pickle.dump(after_words, f)
 
@@ -186,13 +145,11 @@ def LoadPickle():
 
     print 'Loading data...'
 
-    with open('./words_distribution/sentences_begins.pkl', 'rb') as f:
-        first_words = pickle.load(f)
     with open('./words_distribution/after_word.pkl', 'rb') as f:
         after_word = pickle.load(f)
     with open('./words_distribution/after_words.pkl', 'rb') as f:
         after_words = pickle.load(f)
-    return first_words, after_word, after_words
+    return after_word, after_words
 
 
 def GenerateText(sentences_count, words_distribution):
@@ -224,12 +181,12 @@ def GenerateParagraph(paragraph_size, words_distribution):
     return paragraph
 
 
-def GenerateSentence(first_words, after_word, after_words):
+def GenerateSentence(after_word, after_words):
     ''' Генерирует предложение в котором слов от 5 до 30. '''
 
     while True:
         sentence = []
-        sentence.append(GenerateWord(first_words))
+        sentence.append(GenerateWord(after_word['.']))
         while sentence[-1] != '.':
             if (len(sentence) > 2 and sentence[-2] + ' ' +
                sentence[-1] in after_words):
@@ -246,7 +203,7 @@ def GenerateSentence(first_words, after_word, after_words):
 
 
 def GenerateWord(words):
-    ''' Генерирует рандомное слово из words. '''
+    ''' Генерирует слово из words. '''
 
     random_value = random.uniform(0, 1)
     for value, word in words:
